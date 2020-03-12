@@ -1,147 +1,120 @@
-require_relative '../lib/tic_tac_toe.rb'
+class TicTacToe
+  attr_accessor :board
 
-describe './lib/tic_tac_toe.rb' do
-  describe TicTacToe do
-    describe '#play' do
-      it 'asks for players input on a turn of the game' do
-        game = TicTacToe.new
-        allow($stdout).to receive(:puts)
-        allow(game).to receive(:over?).and_return(false, true)
+  def initialize
+    @board = [" ", " ", " ", " ", " ", " ", " ", " ", " "]
+  end
 
-        expect(game).to receive(:gets).at_least(:once).and_return("1")
+  WIN_COMBINATIONS = [
+  [0, 1, 2],
+  [3, 4, 5],
+  [6, 7, 8],
+  [0, 3, 6],
+  [1, 4, 7],
+  [2, 5, 8],
+  [6, 4, 2],
+  [0, 4, 8]
+]
 
-        game.play
+  def display_board
+    puts " #{@board[0]} | #{@board[1]} | #{@board[2]} "
+    puts " ----------- "
+    puts " #{@board[3]} | #{@board[4]} | #{@board[5]} "
+    puts " ----------- "
+    puts " #{@board[6]} | #{@board[7]} | #{@board[8]} "
+  end
+
+  def input_to_index(input)
+    input.to_i - 1
+  end
+
+  def move(position, token='X')
+    @board[position] = token
+  end
+
+  def position_taken?(input)
+    @board[input] == "X" || @board[input] == "O"
+  end
+
+  def valid_move?(input)
+    input.between?(0, 8) && !position_taken?(input)
+  end
+
+
+  def turn
+    puts "Choose a spot between 1-9"
+    spot = gets.strip
+    spot = input_to_index(spot)
+    if valid_move?(spot)
+      move(spot, current_player)
+    else
+      turn
+    end
+    display_board
+  end
+
+  def turn_count
+    taken = 0
+    @board.each do |i|
+      if i == "X" || i == "O"
+        taken += 1
       end
+    end
+    return taken
+  end
 
-      it 'checks if the game is over after every turn' do
-        game = TicTacToe.new
-        allow($stdout).to receive(:puts)
-        allow(game).to receive(:gets).and_return("1", "2", "3")
+  def current_player
+    player = nil
+    if turn_count() % 2 == 0
+      player = 'X'
+    else
+      player = 'O'
+    end
+    return player
+  end
 
-        expect(game).to receive(:over?).at_least(:twice).and_return(false, false, true)
 
-        game.play
-      end
+  def won?
+    WIN_COMBINATIONS.detect do |combo|
+      @board[combo[0]] == @board[combo[1]] &&
+      @board[combo[1]] == @board[combo[2]] &&
+      position_taken?(combo[0])
+    end
+  end
 
-      it 'plays the first turn of the game' do
-        game = TicTacToe.new
-        allow($stdout).to receive(:puts)
-        allow(game).to receive(:gets).and_return("1")
+  def full?
+    turn_count == 9
+  end
 
-        allow(game).to receive(:over?).and_return(false, true)
+  def draw?
+    !won? && full?
+  end
 
-        game.play
-        board_after_first_turn = game.instance_variable_get(:@board)
-        expect(board_after_first_turn).to match_array(["X", " ", " ", " ", " ", " ", " ", " ", " "])
-      end
+  def over?
+    won? || full? || draw?
+  end
 
-      it 'plays the first few turns of the game' do
-        game = TicTacToe.new
+  def winner
+    won = ""
+    if winner = won?
+      won = @board[winner.first]
+    end
+  end
 
-        allow($stdout).to receive(:puts)
-        allow(game).to receive(:gets).and_return("1","2","3")
-        allow(game).to receive(:over?).and_return(false, false, false, true)
+  def play
+    until over?
+      turn
+    end
 
-        game.play
-
-        board_after_three_turns = game.instance_variable_get(:@board)
-        expect(board_after_three_turns).to match_array(["X", "O", "X", " ", " ", " ", " ", " ", " "])
-      end
-
-      it 'checks if the game is won after every turn' do
-        game = TicTacToe.new
-        allow($stdout).to receive(:puts)
-        allow(game).to receive(:gets).and_return("1", "2", "3")
-        allow(game).to receive(:winner).and_return("X")
-
-        expect(game).to receive(:won?).at_least(:twice).and_return(false, false, true)
-
-        game.play
-      end
-
-      it 'checks if the game is draw after every turn' do
-        game = TicTacToe.new
-        allow($stdout).to receive(:puts)
-        allow(game).to receive(:gets).and_return("1", "2", "3")
-
-        expect(game).to receive(:draw?).at_least(:twice).and_return(false, false, true)
-
-        game.play
-      end
-
-      it 'stops playing if someone has won' do
-        game = TicTacToe.new
-        board = ["X", "X", "X", " ", " ", " ", " ", " ", " "]
-        game.instance_variable_set(:@board, board)
-
-        allow($stdout).to receive(:puts)
-
-        expect(game).to_not receive(:turn)
-
-        game.play
-      end
-
-      it 'congratulates the winner X' do
-        game = TicTacToe.new
-        board = ["X", "X", "X", "O", "O", " ", " ", " ", " "]
-        game.instance_variable_set(:@board, board)
-        allow($stdout).to receive(:puts)
-
-        expect($stdout).to receive(:puts).with("Congratulations X!")
-
-        game.play
-      end
-
-      it 'congratulates the winner O' do
-        game = TicTacToe.new
-        board = ["X", "X", " ", "X", " ", " ", "O", "O", "O"]
-        game.instance_variable_set(:@board, board)
-
-        allow($stdout).to receive(:puts)
-
-        expect($stdout).to receive(:puts).with("Congratulations O!")
-
-        game.play
-      end
-
-      it 'stops playing in a draw' do
-        game = TicTacToe.new
-        board = ["X", "O", "X", "O", "X", "X", "O", "X", "O"]
-        game.instance_variable_set(:@board, board)
-        allow($stdout).to receive(:puts)
-
-        expect(game).to_not receive(:turn)
-
-        game.play
-      end
-
-      it 'prints "Cat\'s Game!" on a draw' do
-        game = TicTacToe.new
-        board = ["X", "O", "X", "O", "X", "X", "O", "X", "O"]
-        game.instance_variable_set(:@board, board)
-        allow($stdout).to receive(:puts)
-
-        expect($stdout).to receive(:puts).with("Cat's Game!")
-
-        game.play
-      end
-
-      it 'plays through an entire game' do
-        game = TicTacToe.new
-        allow($stdout).to receive(:puts)
-
-        expect(game).to receive(:gets).and_return("1")
-        expect(game).to receive(:gets).and_return("2")
-        expect(game).to receive(:gets).and_return("3")
-        expect(game).to receive(:gets).and_return("4")
-        expect(game).to receive(:gets).and_return("5")
-        expect(game).to receive(:gets).and_return("6")
-        expect(game).to receive(:gets).and_return("7")
-
-        expect($stdout).to receive(:puts).with("Congratulations X!")
-
-        game.play
-      end
+    if won?
+      winner = winner()
+      puts "Congratulations #{winner}!"
+    elsif draw?
+      puts "Cat's Game!"
     end
   end
 end
+
+game = TicTacToe.new
+game.play
+  
